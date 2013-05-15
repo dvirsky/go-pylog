@@ -78,7 +78,7 @@ func getContext() (file string, line int) {
 //Output debug logging messages
 func Debug(msg string, args ...interface{}) {
 	if level & DEBUG != 0 {
-		log.Printf(fmt.Sprintf("DEBUG: %s",  msg), args...)
+		writeMessage("DEBUG", msg, args...)
 	}
 }
 
