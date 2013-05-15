@@ -17,10 +17,10 @@ Logging level can be set to whatever you want it to be, in runtime. Contrary to 
 
 ```go
 //for INFO and ERROR use:
-SetLevel(logging.INFO | logging.ERROR)
+logging.SetLevel(logging.INFO | logging.ERROR)
 
 // For everything but debug and info use:
-SetLevel(logging.ALL &^ (logging.INFO | logging.DEBUG))
+logging.SetLevel(logging.ALL &^ (logging.INFO | logging.DEBUG))
 ```
 
 ### Installation:
