@@ -116,13 +116,14 @@ func Error(msg string, args ...interface{}) {
 func Critical(msg string, args ...interface{}) {
 	if level & CRITICAL != 0 {
 		writeMessage("CRITICAL", msg, args...)
-		log.Println(debug.Stack())
+		log.Println(string(debug.Stack()))
 	}
 }
 
 // Raise a PANIC while writing the stack trace to the log
 func Panic(msg string, args ...interface{}) {
-	log.Println(debug.Stack())
+	log.Println(string(debug.Stack()))
 	log.Panicf(msg, args...)
 
 }
+

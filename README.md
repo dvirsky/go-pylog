@@ -10,10 +10,36 @@ allows you to set the logging level of your app in runtime.
 Logging is done just like calling fmt.Sprintf:
 
 ```go
-		logging.Info("This object is %s and that is %s", obj, that)
+logging.Info("This object is %s and that is %s", obj, that)
 ```
 
-example output:
+### Installation:
+
+```
+go get github.com/dvirsky/go-pylog/logging
+```
+
+### Usage Example:
+
+```go
+package main
+
+import (
+	"github.com/dvirsky/go-pylog/logging"
+)
+
+func main() {
+
+	logging.Info("All Your Base Are Belong to %s!", "us")
+
+	logging.Critical("And now with a stack trace")
+}
+```
+
+
+
+
+### Example Output:
 
 ```
 2013/05/07 01:20:26 INFO @ db.go:528: Registering plugin REPLICATION
