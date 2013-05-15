@@ -23,6 +23,8 @@ logging.SetLevel(logging.INFO | logging.ERROR)
 logging.SetLevel(logging.ALL &^ (logging.INFO | logging.DEBUG))
 ```
 
+As with the standard log, you can specify any `io.Writer` type interface and send the log's output to it instead of the default stderr.
+
 ### Installation:
 
 ```
