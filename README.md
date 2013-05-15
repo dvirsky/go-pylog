@@ -1,0 +1,27 @@
+PyLog
+====
+
+
+A simple logging module that mimics the behavior of Python's logging module.
+
+All it does basically is wrap Go's logger with nice multi-level logging calls, and
+allows you to set the logging level of your app in runtime.
+
+Logging is done just like calling fmt.Sprintf:
+
+```go
+		logging.Info("This object is %s and that is %s", obj, that)
+```
+
+example output:
+
+```
+2013/05/07 01:20:26 INFO @ db.go:528: Registering plugin REPLICATION
+2013/05/07 01:20:26 INFO @ db.go:562: Registered 6 plugins and 22 commands
+2013/05/07 01:20:26 INFO @ slave.go:277: Running replication watchdog loop!
+2013/05/07 01:20:26 INFO @ redis.go:49: Redis adapter listening on 0.0.0.0:2000
+2013/05/07 01:20:26 WARN @ main.go:69: Starting adapter...
+2013/05/07 01:20:26 INFO @ db.go:966: Finished dump load. Loaded 2 objects from dump
+2013/05/07 01:22:26 INFO @ db.go:329: Checking persistence... 0 changes since 2m0.000297531s
+2013/05/07 01:22:26 DEBUG @ db.go:341: Sleeping for 2m0s
+```
