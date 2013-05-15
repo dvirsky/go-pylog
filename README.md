@@ -13,6 +13,16 @@ Logging is done just like calling fmt.Sprintf:
 logging.Info("This object is %s and that is %s", obj, that)
 ```
 
+Logging level can be set to whatever you want it to be, in runtime. Contrary to Python that specifies a minimal level, this logger is set with a bit mask of active levels.
+
+```go
+//for INFO and ERROR use:
+SetLevel(logging.INFO | logging.ERROR)
+
+// For everything but debug and info use:
+SetLevel(logging.ALL &^ (logging.INFO | logging.DEBUG))
+```
+
 ### Installation:
 
 ```
