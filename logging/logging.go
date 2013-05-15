@@ -62,7 +62,7 @@ func SetLevel(l int) {
 }
 
 // Set the output writer. for now it just wraps log.SetOutput()
-func SetOutPut(w io.Writer) {
+func SetOutput(w io.Writer) {
 	log.SetOutput(w)
 }
 
