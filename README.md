@@ -49,6 +49,21 @@ func main() {
 ```
 
 
+### Custom Handlers
+
+By default we just write to Go's log, and you can set the output stream of it. But you can add a custom `handler` that will receive the raw unformatted messages, format them and do whatever it wants with them. 
+
+This was added for the use case of `Scribe`, that needs to receive messages as a pair of category and message. So an io.Writer was not applicable.
+
+### Custom Message formatting
+
+It is possible to change the logger's display format. The default format is 
+`"%[1]s @ %[2]s:%[2]d: %[4]s"` - resulting in messages looking like:
+`INFO @ db.go:528: Registering plugin REPLICATION`. 
+
+The indexes are there so you can change the order of the formatting elements if you want. [1] means the logging level, [2] is the file, [3] is the line and [4] is the unformatted message passed to the log.
+
+To change the way they are formatted, call `logging.SetFormatString()`.
 
 
 ### Example Output:
