@@ -20,27 +20,28 @@
 package logging
 
 import (
-	"log"
 	"fmt"
+	//	"github.com/samuel/go-thrift/examples/scribe"
+	//"github.com/samuel/go-thrift/thrift"
 	"io"
-	"runtime/debug"
+	"log"
+	//	"net"
 	"path"
 	"runtime"
+	"runtime/debug"
 )
 
-
-
 const (
-	DEBUG = 1
-	INFO = 2
-	WARNING = 4
-	WARN = 4
-	ERROR = 8
-	CRITICAL  = 16
-	QUIET = ERROR | CRITICAL  //setting for errors only
-	NORMAL = INFO | WARN | ERROR | CRITICAL // default setting - all besides debug
-	ALL = 255
-	NOTHING = 0
+	DEBUG    = 1
+	INFO     = 2
+	WARNING  = 4
+	WARN     = 4
+	ERROR    = 8
+	CRITICAL = 16
+	QUIET    = ERROR | CRITICAL               //setting for errors only
+	NORMAL   = INFO | WARN | ERROR | CRITICAL // default setting - all besides debug
+	ALL      = 255
+	NOTHING  = 0
 )
 
 //default logging level is ALL
@@ -59,11 +60,47 @@ var level int = ALL
 //
 func SetLevel(l int) {
 	level = l
+
 }
 
 // Set the output writer. for now it just wraps log.SetOutput()
 func SetOutput(w io.Writer) {
 	log.SetOutput(w)
+}
+
+//a pluggable logger interface
+type LoggingHandler interface {
+	Emit(level, file string, line int, message string, args ...interface{}) error
+}
+
+type strandardHandler struct{}
+
+var formatString = "%[1]s @ %[2]s:%[3]d: %[4]s"
+
+// Set the logger's format string. The arguments passed to it are always "level, file string, line int, message string"
+//
+// This means that if you want to change the order they appear, you should use explicit index numbers in formatting.
+//
+// The default format is "%[1]s @ %[2]s:%[2]d: %[4]s"
+func SetFormatString(format string) {
+	formatString = format
+}
+
+func GetFormatString() string {
+	return formatString
+}
+
+// default handling interface - just
+func (l strandardHandler) Emit(level, file string, line int, message string, args ...interface{}) error {
+	log.Printf(fmt.Sprintf(formatString, level, file, line, message), args...)
+	return nil
+}
+
+var currentHandler LoggingHandler = &strandardHandler{}
+
+// Set the current handler of the library. We currently support one handler, but it might be nice to have more
+func SetHandler(h LoggingHandler) {
+	currentHandler = h
 }
 
 //get the stack (line + file) context to return the caller to the log
@@ -77,21 +114,22 @@ func getContext() (file string, line int) {
 
 //Output debug logging messages
 func Debug(msg string, args ...interface{}) {
-	if level & DEBUG != 0 {
+	if level&DEBUG != 0 {
 		writeMessage("DEBUG", msg, args...)
 	}
 }
 
 //format the message
-func writeMessage(level string, msg string, args ...interface {} ) {
+func writeMessage(level string, msg string, args ...interface{}) {
 	f, l := getContext()
-	log.Printf(fmt.Sprintf("%s @ %s:%d: %s", level, f, l, msg), args...)
+	currentHandler.Emit(level, f, l, msg, args...)
+	//log.Printf(fmt.Sprintf("%s @ %s:%d: %s", level, f, l, msg), args...)
 }
 
 //output INFO level messages
 func Info(msg string, args ...interface{}) {
 
-	if level & INFO != 0 {
+	if level&INFO != 0 {
 
 		writeMessage("INFO", msg, args...)
 
@@ -100,21 +138,21 @@ func Info(msg string, args ...interface{}) {
 
 //output WARNING level messages
 func Warning(msg string, args ...interface{}) {
-	if level & WARN != 0 {
+	if level&WARN != 0 {
 		writeMessage("WARNING", msg, args...)
 	}
 }
 
 //output ERROR level messages
 func Error(msg string, args ...interface{}) {
-	if level & ERROR != 0 {
+	if level&ERROR != 0 {
 		writeMessage("ERROR", msg, args...)
 	}
 }
 
 //Output a CRITICAL level message while showing a stack trace
 func Critical(msg string, args ...interface{}) {
-	if level & CRITICAL != 0 {
+	if level&CRITICAL != 0 {
 		writeMessage("CRITICAL", msg, args...)
 		log.Println(string(debug.Stack()))
 	}
@@ -126,4 +164,3 @@ func Panic(msg string, args ...interface{}) {
 	log.Panicf(msg, args...)
 
 }
-
