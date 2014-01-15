@@ -96,7 +96,7 @@ func (l strandardHandler) Emit(level, file string, line int, message string, arg
 	return nil
 }
 
-var currentHandler LoggingHandler = &strandardHandler{}
+var currentHandler LoggingHandler = strandardHandler{}
 
 // Set the current handler of the library. We currently support one handler, but it might be nice to have more
 func SetHandler(h LoggingHandler) {
@@ -122,8 +122,12 @@ func Debug(msg string, args ...interface{}) {
 //format the message
 func writeMessage(level string, msg string, args ...interface{}) {
 	f, l := getContext()
-	currentHandler.Emit(level, f, l, msg, args...)
-	//log.Printf(fmt.Sprintf("%s @ %s:%d: %s", level, f, l, msg), args...)
+	err := currentHandler.Emit(level, f, l, msg, args...)
+	if err != nil {
+		log.Printf("Error writing log message: %s\n", err)
+		log.Printf(fmt.Sprintf(formatString, level, f, l, msg), args...)
+	}
+
 }
 
 //output INFO level messages
