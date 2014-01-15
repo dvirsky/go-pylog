@@ -51,9 +51,20 @@ func main() {
 
 ### Custom Handlers
 
-By default we just write to Go's log, and you can set the output stream of it. But you can add a custom `handler` that will receive the raw unformatted messages, format them and do whatever it wants with them. 
+By default we just write to Go's log, and you can set the output stream of it. But you can add a custom `handler` that will receive the raw unformatted messages, format them and do whatever it wants with them.  The logger currently supports a single handler. 
 
 This was added for the use case of `Scribe`, that needs to receive messages as a pair of category and message. So an io.Writer was not applicable.
+
+The inreface for a `LogHandler` is:
+
+```go
+type LoggingHandler interface {
+    Emit(level, file string, line int, message string, args ...interface{}) error
+}
+```
+
+To set your own handler (or the provided scribe handler in the library), call `logging.SetHandler(myHandler)`.
+
 
 ### Custom Message formatting
 
