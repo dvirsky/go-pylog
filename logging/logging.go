@@ -123,6 +123,9 @@ func Debug(msg string, args ...interface{}) {
 func writeMessage(level string, msg string, args ...interface{}) {
 	f, l := getContext()
 
+	// Go over the args, and replace any function pointer with the signature
+	// func() interface{} with the return value of executing it now.
+	// This allows lazy evaluation of arguments which are return values
 	for i, arg := range args {
 		switch arg.(type) {
 		case func() interface{}:
