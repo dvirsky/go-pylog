@@ -73,8 +73,6 @@ type LoggingHandler interface {
 	Emit(level, file string, line int, message string, args ...interface{}) error
 }
 
-type strandardHandler struct{}
-
 var formatString = "%[1]s @ %[2]s:%[3]d: %[4]s"
 
 // Set the logger's format string. The arguments passed to it are always "level, file string, line int, message string"
@@ -89,6 +87,8 @@ func SetFormatString(format string) {
 func GetFormatString() string {
 	return formatString
 }
+
+type strandardHandler struct{}
 
 // default handling interface - just
 func (l strandardHandler) Emit(level, file string, line int, message string, args ...interface{}) error {
