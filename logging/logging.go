@@ -122,6 +122,15 @@ func Debug(msg string, args ...interface{}) {
 //format the message
 func writeMessage(level string, msg string, args ...interface{}) {
 	f, l := getContext()
+
+	for i, arg := range args {
+		switch arg.(type) {
+		case func() interface{}:
+			args[i] = arg.(func() interface{})()
+		default:
+
+		}
+	}
 	err := currentHandler.Emit(level, f, l, msg, args...)
 	if err != nil {
 		log.Printf("Error writing log message: %s\n", err)

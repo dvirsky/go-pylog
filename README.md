@@ -48,6 +48,32 @@ func main() {
 }
 ```
 
+### Lazily Evaluated functions as arguments
+
+You can give the logger a function with the signature `func() interface{}`, and it will only execute it if the message is being printed, and simply format its output into the log.
+
+For example:
+```go
+// just pass a lambda
+logging.Debug("The time now is %s", func() interface{} { return time.Now()})
+
+// or for more complex stuff:
+
+// let's say we have this heavy weight function we want to log, 
+// but only if the relevant level is activ
+func sumSeries(s []int) int {
+    ret := 0
+    for _, n := range s {
+        ret += n
+    }
+    return ret
+}
+
+// Wrapping it in this lazy lambda this will execute the function only if the level matches Info
+logging.Info("The sum of my series is %d", func() interface{} { return sumSeries(mySeries)})
+```
+
+
 
 ### Custom Handlers
 
