@@ -25,6 +25,7 @@ import (
 	//"github.com/samuel/go-thrift/thrift"
 	"io"
 	"log"
+	"strings"
 	//	"net"
 	"path"
 	"runtime"
@@ -44,6 +45,21 @@ const (
 	NOTHING  = 0
 )
 
+var levels_ascending = []int{DEBUG, INFO, WARNING, ERROR, CRITICAL}
+
+var LevlelsByName = map[string]int{
+	"DEBUG":    DEBUG,
+	"INFO":     INFO,
+	"WARNING":  WARN,
+	"WARN":     WARN,
+	"ERROR":    ERROR,
+	"CRITICAL": CRITICAL,
+	"QUIET":    QUIET,
+	"NORMAL":   NORMAL,
+	"ALL":      ALL,
+	"NOTHING":  NOTHING,
+}
+
 //default logging level is ALL
 var level int = ALL
 
@@ -60,7 +76,38 @@ var level int = ALL
 //
 func SetLevel(l int) {
 	level = l
+}
 
+// Set a minimal level for loggin, setting all levels higher than this level as well.
+//
+// the severity order is DEBUG, INFO, WARNING, ERROR, CRITICAL
+func SetMinimalLevel(l int) {
+
+	newLevel := 0
+	for _, level := range levels_ascending {
+		if level >= l {
+
+			newLevel |= level
+			fmt.Println(level, newLevel)
+		}
+	}
+	SetLevel(newLevel)
+
+}
+
+// Set minimal level by string, useful for config files and command line arguments. Case insensitive.
+//
+// Possible level names are DEBUG, INFO, WARNING, ERROR, CRITICAL
+func SetMinimalLevelByName(l string) error {
+	l = strings.ToUpper(strings.Trim(l, " "))
+	level, found := LevlelsByName[l]
+	if !found {
+		Error("Could not set level - not found level %s", l)
+		return fmt.Errorf("Invalid level %s", l)
+	}
+
+	SetMinimalLevel(level)
+	return nil
 }
 
 // Set the output writer. for now it just wraps log.SetOutput()
@@ -123,7 +170,7 @@ func Debug(msg string, args ...interface{}) {
 func writeMessage(level string, msg string, args ...interface{}) {
 	f, l := getContext()
 
-	// Go over the args, and replace any function pointer with the signature
+	// We go over the args, and replace any function pointer with the signature
 	// func() interface{} with the return value of executing it now.
 	// This allows lazy evaluation of arguments which are return values
 	for i, arg := range args {

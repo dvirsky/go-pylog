@@ -36,6 +36,40 @@ func logAllLevels(msg string) {
 	//we do not test critical as it calls GoExit
 	//Critical(msg)
 }
+
+func Test_SetLevelByString(t *testing.T) {
+
+	w := new(TestWriter)
+	SetOutput(w)
+
+	w.Reset()
+	//test levels
+	e := SetMinimalLevelByName("DEBUG")
+	fmt.Println(level)
+	if e != nil {
+		t.Fatalf("Could not set level by name: %s", e)
+	}
+	logAllLevels("Hello world")
+
+	if w.Len() != 4 {
+		t.Errorf("Not all levels logged - got  %d messages", w.Len())
+	}
+	e = SetMinimalLevelByName("ERROR")
+	if e != nil {
+		t.Fatalf("Could not set level by name: %s", e)
+	}
+	w.Reset()
+	logAllLevels("Hello world")
+	if w.Len() != 1 {
+		t.Errorf("Not all levels logged - got  %d messages", w.Len())
+	}
+
+	e = SetMinimalLevelByName("FOOBAR")
+	if e == nil {
+		t.Fatalf("This should have raised an error...")
+	}
+
+}
 func Test_Logging(t *testing.T) {
 
 	w := new(TestWriter)
