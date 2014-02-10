@@ -199,26 +199,56 @@ func Info(msg string, args ...interface{}) {
 	}
 }
 
-//output WARNING level messages
+// Output WARNING level messages
 func Warning(msg string, args ...interface{}) {
 	if level&WARN != 0 {
 		writeMessage("WARNING", msg, args...)
 	}
 }
 
-//output ERROR level messages
+// Same as Warning() but return a formatted error object, regardless of logging level
+func Warningf(msg string, args ...interface{}) error {
+	err := fmt.Errorf(msg, args)
+	if level&WARN != 0 {
+		writeMessage("WARNING", err.Error())
+	}
+
+	return err
+}
+
+// Output ERROR level messages
 func Error(msg string, args ...interface{}) {
 	if level&ERROR != 0 {
 		writeMessage("ERROR", msg, args...)
 	}
 }
 
-//Output a CRITICAL level message while showing a stack trace
+// Same as Error() but also returns a new formatted error object with the message regardless of logging level
+func Errorf(msg string, args ...interface{}) error {
+	err := fmt.Errorf(msg, args)
+	if level&ERROR != 0 {
+		writeMessage("ERROR", err.Error())
+	}
+	return err
+}
+
+// Output a CRITICAL level message while showing a stack trace
 func Critical(msg string, args ...interface{}) {
 	if level&CRITICAL != 0 {
 		writeMessage("CRITICAL", msg, args...)
 		log.Println(string(debug.Stack()))
 	}
+}
+
+// Same as critical but also returns an error object with the message regardless of logging level
+func Criticalf(msg string, args ...interface{}) error {
+
+	err := fmt.Errorf(msg, args)
+	if level&CRITICAL != 0 {
+		writeMessage("CRITICAL", err.Error())
+		log.Println(string(debug.Stack()))
+	}
+	return err
 }
 
 // Raise a PANIC while writing the stack trace to the log
