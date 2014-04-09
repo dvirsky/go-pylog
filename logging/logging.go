@@ -21,15 +21,13 @@ package logging
 
 import (
 	"fmt"
-	//	"github.com/samuel/go-thrift/examples/scribe"
-	//"github.com/samuel/go-thrift/thrift"
 	"io"
 	"log"
-	"strings"
-	//	"net"
 	"path"
 	"runtime"
 	"runtime/debug"
+	"strings"
+	"time"
 )
 
 const (
@@ -117,46 +115,52 @@ func SetOutput(w io.Writer) {
 
 //a pluggable logger interface
 type LoggingHandler interface {
-	Emit(level, file string, line int, message string, args ...interface{}) error
+	SetFormatter(Formatter)
+	Emit(ctx *MessageContext, message string, args ...interface{}) error
 }
 
-var formatString = "%[1]s @ %[2]s:%[3]d: %[4]s"
-
-// Set the logger's format string. The arguments passed to it are always "level, file string, line int, message string"
-//
-// This means that if you want to change the order they appear, you should use explicit index numbers in formatting.
-//
-// The default format is "%[1]s @ %[2]s:%[2]d: %[4]s"
-func SetFormatString(format string) {
-	formatString = format
+type strandardHandler struct {
+	formatter Formatter
 }
 
-func GetFormatString() string {
-	return formatString
+func (l *strandardHandler) SetFormatter(f Formatter) {
+	l.formatter = f
 }
-
-type strandardHandler struct{}
 
 // default handling interface - just
-func (l strandardHandler) Emit(level, file string, line int, message string, args ...interface{}) error {
-	log.Printf(fmt.Sprintf(formatString, level, file, line, message), args...)
+func (l *strandardHandler) Emit(ctx *MessageContext, message string, args ...interface{}) error {
+	log.Printf(l.formatter.Format(ctx, message, args...))
 	return nil
 }
 
-var currentHandler LoggingHandler = strandardHandler{}
+var currentHandler LoggingHandler = &strandardHandler{
+	DefaultFormatter,
+}
 
 // Set the current handler of the library. We currently support one handler, but it might be nice to have more
 func SetHandler(h LoggingHandler) {
 	currentHandler = h
 }
 
-//get the stack (line + file) context to return the caller to the log
-func getContext() (file string, line int) {
+type MessageContext struct {
+	Level     string
+	File      string
+	Line      int
+	TimeStamp time.Time
+}
 
-	_, file, line, _ = runtime.Caller(3)
+//get the stack (line + file) context to return the caller to the log
+func getContext(level string) *MessageContext {
+
+	_, file, line, _ := runtime.Caller(3)
 	file = path.Base(file)
 
-	return
+	return &MessageContext{
+		Level:     level,
+		File:      file,
+		TimeStamp: time.Now(),
+		Line:      line,
+	}
 }
 
 //Output debug logging messages
@@ -168,7 +172,7 @@ func Debug(msg string, args ...interface{}) {
 
 //format the message
 func writeMessage(level string, msg string, args ...interface{}) {
-	f, l := getContext()
+	ctx := getContext(level)
 
 	// We go over the args, and replace any function pointer with the signature
 	// func() interface{} with the return value of executing it now.
@@ -181,10 +185,11 @@ func writeMessage(level string, msg string, args ...interface{}) {
 
 		}
 	}
-	err := currentHandler.Emit(level, f, l, msg, args...)
+
+	err := currentHandler.Emit(ctx, msg, args...)
 	if err != nil {
 		log.Printf("Error writing log message: %s\n", err)
-		log.Printf(fmt.Sprintf(formatString, level, f, l, msg), args...)
+		log.Printf(DefaultFormatter.Format(ctx, msg, args...))
 	}
 
 }
@@ -256,4 +261,8 @@ func Panic(msg string, args ...interface{}) {
 	log.Println(string(debug.Stack()))
 	log.Panicf(msg, args...)
 
+}
+
+func init() {
+	log.SetFlags(0)
 }

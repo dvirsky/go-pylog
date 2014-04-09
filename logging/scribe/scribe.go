@@ -9,15 +9,17 @@ import (
 	//"io"
 	"log"
 	"net"
+	"os"
 	"time"
 )
 
 type ScribeLogger struct {
-	client   *scribe.ScribeClient
-	addr     string
-	enabled  bool
-	category string
-	channel  chan *scribe.LogEntry
+	client    *scribe.ScribeClient
+	addr      string
+	enabled   bool
+	category  string
+	channel   chan *scribe.LogEntry
+	formatter logging.Formatter
 }
 
 func (l *ScribeLogger) connect() error {
@@ -59,11 +61,12 @@ func (l *ScribeLogger) connect() error {
 func NewScribeLogger(addr string, category string, bufferSize int) *ScribeLogger {
 
 	ret := &ScribeLogger{
-		addr:     addr,
-		client:   nil,
-		enabled:  true,
-		category: category,
-		channel:  make(chan *scribe.LogEntry, bufferSize),
+		addr:      addr,
+		client:    nil,
+		enabled:   true,
+		category:  category,
+		channel:   make(chan *scribe.LogEntry, bufferSize),
+		formatter: &ScribeFormatter{},
 	}
 
 	go ret.sendLoop()
@@ -112,6 +115,23 @@ func (l *ScribeLogger) sendLoop() {
 	}
 }
 
+// format for the scribe formatter. we add the hostname so we can distinguish between messages from different servers
+const FORMAT_STRING = "[%s] [%s] [%s in %s:%d] %s"
+
+// default host name
+var hostName = "localhost"
+
+func init() {
+	hostName, _ = os.Hostname()
+}
+
+type ScribeFormatter struct{}
+
+func (f *ScribeFormatter) Format(ctx *logging.MessageContext, message string, args ...interface{}) string {
+
+	return fmt.Sprintf(FORMAT_STRING, ctx.TimeStamp.Format(time.StampNano), hostName, ctx.Level, ctx.File, ctx.Line, fmt.Sprintf(message, args...))
+}
+
 // Stop the handler from sending to scribe, by setting the enabled flag.
 // This will cause the send loop to exit
 func (l *ScribeLogger) Stop() {
@@ -119,13 +139,18 @@ func (l *ScribeLogger) Stop() {
 	close(l.channel)
 }
 
+func (l *ScribeLogger) SetFormatter(f logging.Formatter) {
+	l.formatter = f
+}
+
 // Emit - format the message and queue it to be sent to the scribe server
-func (l *ScribeLogger) Emit(level, file string, line int, message string, args ...interface{}) error {
+func (l *ScribeLogger) Emit(ctx *logging.MessageContext, message string, args ...interface{}) error {
 
 	if l.enabled {
-		//format the message
-		str := fmt.Sprintf(fmt.Sprintf(logging.GetFormatString(), level, file, line, message), args...)
-		category := fmt.Sprintf("%s.%s", l.category, level)
+		// format the message - we remove the level because scribe already sends them to different pipelines
+		// plus we add the timestamp which the default logger already has
+		str := l.formatter.Format(ctx, message, args...)
+		category := fmt.Sprintf("%s.%s", l.category, ctx.Level)
 
 		//make sure the channel is not closed
 		if l.channel != nil {
