@@ -213,7 +213,7 @@ func Warning(msg string, args ...interface{}) {
 
 // Same as Warning() but return a formatted error object, regardless of logging level
 func Warningf(msg string, args ...interface{}) error {
-	err := fmt.Errorf(msg, args)
+	err := fmt.Errorf(msg, args...)
 	if level&WARN != 0 {
 		writeMessage("WARNING", err.Error())
 	}
@@ -230,7 +230,7 @@ func Error(msg string, args ...interface{}) {
 
 // Same as Error() but also returns a new formatted error object with the message regardless of logging level
 func Errorf(msg string, args ...interface{}) error {
-	err := fmt.Errorf(msg, args)
+	err := fmt.Errorf(msg, args...)
 	if level&ERROR != 0 {
 		writeMessage("ERROR", err.Error())
 	}
@@ -248,7 +248,7 @@ func Critical(msg string, args ...interface{}) {
 // Same as critical but also returns an error object with the message regardless of logging level
 func Criticalf(msg string, args ...interface{}) error {
 
-	err := fmt.Errorf(msg, args)
+	err := fmt.Errorf(msg, args...)
 	if level&CRITICAL != 0 {
 		writeMessage("CRITICAL", err.Error())
 		log.Println(string(debug.Stack()))
