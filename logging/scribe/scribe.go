@@ -44,7 +44,8 @@ func (l *ScribeLogger) connect() error {
 
 	}
 
-	client := thrift.NewClient(thrift.NewFramedReadWriteCloser(conn, 0), thrift.NewBinaryProtocol(true, false), false)
+	transport := thrift.NewTransport(thrift.NewFramedReadWriteCloser(conn, 0), thrift.BinaryProtocol)
+	client := thrift.NewClient(transport, false)
 	l.client = &scribe.ScribeClient{Client: client}
 	l.enabled = true
 	return nil
