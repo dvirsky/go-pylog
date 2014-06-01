@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"regexp"
 	"testing"
+	"time"
 )
+
+var _ = regexp.Compile
 
 type TestWriter struct {
 	messages []string
@@ -109,26 +112,32 @@ func Test_Logging(t *testing.T) {
 }
 
 type TestHandler struct {
-	output [][]interface{}
-	t      *testing.T
+	output    [][]interface{}
+	formatter Formatter
+	t         *testing.T
 }
 
-func (t *TestHandler) Emit(level, file string, line int, message string, args ...interface{}) error {
-	t.output = append(t.output, []interface{}{level, file, line, message, args})
-
-	if file != "logging_test.go" {
-		t.t.Fatalf("Got invalid file reference %s!", file)
+func (t *TestHandler) Emit(ctx *MessageContext, message string, args ...interface{}) error {
+	t.output = append(t.output, []interface{}{ctx.Level, ctx.File, message, ctx.Line, args})
+	fmt.Println(*ctx)
+	if ctx.File != "logging_test.go" {
+		t.t.Fatalf("Got invalid file reference %s!", ctx.File)
 	}
-	if line <= 0 || level == "" {
+	if ctx.Line <= 0 || ctx.Level == "" {
 		t.t.Fatalf("Invalid args")
 	}
 	return nil
+}
+
+func (t *TestHandler) SetFormatter(fmt Formatter) {
+	t.formatter = fmt
 }
 
 func Test_Handler(t *testing.T) {
 
 	handler := &TestHandler{
 		make([][]interface{}, 0),
+		DefaultFormatter,
 		t,
 	}
 	SetHandler(handler)
@@ -144,40 +153,54 @@ func Test_Handler(t *testing.T) {
 	fmt.Println("Passed testHandler")
 }
 
+func Test_Context(t *testing.T) {
+	var ctx *MessageContext
+	func() {
+		func() {
+			ctx = getContext("INFO")
+		}()
+	}()
+	if ctx.File != "logging_test.go" {
+		t.Fatal("Wrong file:", ctx.File)
+	}
+	if ctx.Level != "INFO" {
+		t.Fatal(ctx.Level)
+	}
+
+	// validate timestamp sampling - if the context's timestamp is more than 10ms before now() or it is after now, we fail
+	if ctx.TimeStamp.Add(10*time.Millisecond).Before(time.Now()) || ctx.TimeStamp.After(time.Now()) {
+		t.Fatal("Wrong timestamp: ", ctx.TimeStamp)
+
+	}
+	fmt.Println(ctx)
+}
+
 func Test_Formatting(t *testing.T) {
-	SetHandler(strandardHandler{})
-	w := new(TestWriter)
-	w.Reset()
-	SetOutput(w)
-	SetLevel(ALL)
-
-	writeMessage("TESTING", "FOO %s", "bar")
-
-	msg := w.messages[0]
-
-	fmt.Println("Message: ", msg)
-	matched, err := regexp.Match("^[0-9]{4}/[0-9]{2}/[0-9]{2} ([0-9]+\\:?){3} TESTING [@] testing\\.go\\:[0-9]+\\: FOO bar", []byte(msg))
-
-	if !matched || err != nil {
-		t.Errorf("Failed match %s", err)
+	ctx := &MessageContext{
+		Level: "TEST",
+		File:  "testung",
+		Line:  100,
 	}
 
-	format := "%[4]s @ %[3]d:%[2]s: %[1]s"
+	formatter := DefaultFormatter
 
-	file := "testung"
-	level := "TEST"
-	line := 100
-	mesg := "FOO"
+	msg := formatter.Format(ctx, "FOO %s", "bar")
 
-	s := fmt.Sprintf(format, level, file, line, mesg)
-	if s != "FOO @ 100:testung: TEST" {
-		t.FailNow()
+	//fmt.Println("Message: ", msg)
+	if msg != "[TEST Jan  1 00:00:00.000000000, testung:100] FOO bar" {
+		t.Fatal("Got wrong formatting:", msg)
 	}
 
-	SetFormatString(format)
-	if GetFormatString() != format {
-		t.Fatalf("Not matching format strings")
-	}
+	//"[%[1]s %[2]s, %[3]s:%[4]d] %[5]s",
+	format := "%[5]s @ %[4]d:%[3]s: %[2]s %[1]s"
+	formatter = &SimpleFormatter{format}
+
+	mesg := "FOO %s"
+
+	s := formatter.Format(ctx, mesg, "BAR")
 	fmt.Println(s)
+	if s != "FOO BAR @ 100:testung: Jan  1 00:00:00.000000000 TEST" {
+		t.Fatal(s)
+	}
 
 }
