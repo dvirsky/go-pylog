@@ -36,14 +36,15 @@ const (
 	WARNING  = 4
 	WARN     = 4
 	ERROR    = 8
-	CRITICAL = 16
-	QUIET    = ERROR | CRITICAL               //setting for errors only
-	NORMAL   = INFO | WARN | ERROR | CRITICAL // default setting - all besides debug
+	NOTICE   = 16 //notice is like info but for really important stuff ;)
+	CRITICAL = 32
+	QUIET    = ERROR | NOTICE | CRITICAL               //setting for errors only
+	NORMAL   = INFO | WARN | ERROR | NOTICE | CRITICAL // default setting - all besides debug
 	ALL      = 255
 	NOTHING  = 0
 )
 
-var levels_ascending = []int{DEBUG, INFO, WARNING, ERROR, CRITICAL}
+var levels_ascending = []int{DEBUG, INFO, WARNING, ERROR, NOTICE, CRITICAL}
 
 var LevlelsByName = map[string]int{
 	"DEBUG":    DEBUG,
@@ -51,6 +52,7 @@ var LevlelsByName = map[string]int{
 	"WARNING":  WARN,
 	"WARN":     WARN,
 	"ERROR":    ERROR,
+	"NOTICE":   NOTICE,
 	"CRITICAL": CRITICAL,
 	"QUIET":    QUIET,
 	"NORMAL":   NORMAL,
@@ -84,9 +86,7 @@ func SetMinimalLevel(l int) {
 	newLevel := 0
 	for _, level := range levels_ascending {
 		if level >= l {
-
 			newLevel |= level
-			fmt.Println(level, newLevel)
 		}
 	}
 	SetLevel(newLevel)
@@ -95,7 +95,7 @@ func SetMinimalLevel(l int) {
 
 // Set minimal level by string, useful for config files and command line arguments. Case insensitive.
 //
-// Possible level names are DEBUG, INFO, WARNING, ERROR, CRITICAL
+// Possible level names are DEBUG, INFO, WARNING, ERROR, NOTICE, CRITICAL
 func SetMinimalLevelByName(l string) error {
 	l = strings.ToUpper(strings.Trim(l, " "))
 	level, found := LevlelsByName[l]
@@ -235,6 +235,13 @@ func Errorf(msg string, args ...interface{}) error {
 		writeMessage("ERROR", err.Error())
 	}
 	return err
+}
+
+// Output NOTICE level messages
+func Notice(msg string, args ...interface{}) {
+	if level&NOTICE != 0 {
+		writeMessage("NOTICE", msg, args...)
+	}
 }
 
 // Output a CRITICAL level message while showing a stack trace
