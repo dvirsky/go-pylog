@@ -129,7 +129,7 @@ func (l *strandardHandler) SetFormatter(f Formatter) {
 
 // default handling interface - just
 func (l *strandardHandler) Emit(ctx *MessageContext, message string, args ...interface{}) error {
-	log.Printf(l.formatter.Format(ctx, message, args...))
+	log.Print(l.formatter.Format(ctx, message, args...))
 	return nil
 }
 
