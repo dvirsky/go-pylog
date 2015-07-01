@@ -142,6 +142,10 @@ func SetHandler(h LoggingHandler) {
 	currentHandler = h
 }
 
+func CurrentHandler() LoggingHandler {
+	return currentHandler
+}
+
 type MessageContext struct {
 	Level     string
 	File      string
