@@ -20,9 +20,11 @@
 package logging
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"path"
 	"runtime"
 	"runtime/debug"
@@ -129,7 +131,7 @@ func (l *strandardHandler) SetFormatter(f Formatter) {
 
 // default handling interface - just
 func (l *strandardHandler) Emit(ctx *MessageContext, message string, args ...interface{}) error {
-	log.Print(l.formatter.Format(ctx, message, args...))
+	fmt.Fprintln(os.Stderr, l.formatter.Format(ctx, message, args...))
 	return nil
 }
 
@@ -154,9 +156,9 @@ type MessageContext struct {
 }
 
 //get the stack (line + file) context to return the caller to the log
-func getContext(level string) *MessageContext {
+func getContext(level string, skipDepth int) *MessageContext {
 
-	_, file, line, _ := runtime.Caller(3)
+	_, file, line, _ := runtime.Caller(skipDepth)
 	file = path.Base(file)
 
 	return &MessageContext{
@@ -176,7 +178,11 @@ func Debug(msg string, args ...interface{}) {
 
 //format the message
 func writeMessage(level string, msg string, args ...interface{}) {
-	ctx := getContext(level)
+	writeMessageDepth(3, level, msg, args...)
+}
+
+func writeMessageDepth(depth int, level string, msg string, args ...interface{}) {
+	ctx := getContext(level, depth)
 
 	// We go over the args, and replace any function pointer with the signature
 	// func() interface{} with the return value of executing it now.
@@ -276,4 +282,34 @@ func Panic(msg string, args ...interface{}) {
 
 func init() {
 	log.SetFlags(0)
+}
+
+// bridge bridges the logger and the default go log, with a given level
+type bridge struct {
+	level     int
+	levelName string
+}
+
+func (lb bridge) Write(p []byte) (n int, err error) {
+	if level&lb.level != 0 {
+		writeMessageDepth(6, lb.levelName, string(bytes.TrimRight(p, "\r\n")))
+	}
+	return len(p), nil
+}
+
+// BridgeStdLog bridges all messages written using the standard library's log.Print* and makes them output
+// through this logger, at a given level.
+func BridgeStdLog(level int) {
+
+	for k, l := range LevlelsByName {
+		if l == level {
+			b := bridge{
+				level:     l,
+				levelName: k,
+			}
+
+			log.SetOutput(b)
+		}
+	}
+
 }
