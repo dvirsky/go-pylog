@@ -198,8 +198,8 @@ func writeMessageDepth(depth int, level string, msg string, args ...interface{})
 
 	err := currentHandler.Emit(ctx, msg, args...)
 	if err != nil {
-		log.Printf("Error writing log message: %s\n", err)
-		log.Printf(DefaultFormatter.Format(ctx, msg, args...))
+		fmt.Fprintf(os.Stderr, "Error writing log message: %s\n", err)
+		fmt.Fprintln(os.Stderr, DefaultFormatter.Format(ctx, msg, args...))
 	}
 
 }

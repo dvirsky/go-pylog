@@ -157,7 +157,7 @@ func Test_Context(t *testing.T) {
 	var ctx *MessageContext
 	func() {
 		func() {
-			ctx = getContext("INFO")
+			ctx = getContext("INFO", 4)
 		}()
 	}()
 	if ctx.File != "logging_test.go" {

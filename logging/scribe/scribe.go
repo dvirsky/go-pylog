@@ -3,23 +3,26 @@ package scribe
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/dvirsky/go-pylog/logging"
 	"github.com/samuel/go-thrift/examples/scribe"
 	"github.com/samuel/go-thrift/thrift"
 	//"io"
-	"log"
+	//"log"
 	"net"
 	"os"
 	"time"
 )
 
 type ScribeLogger struct {
-	client    *scribe.ScribeClient
-	addr      string
-	enabled   bool
-	category  string
-	channel   chan *scribe.LogEntry
-	formatter logging.Formatter
+	client          *scribe.ScribeClient
+	addr            string
+	enabled         bool
+	category        string
+	channel         chan *scribe.LogEntry
+	formatter       logging.Formatter
+	secondaryOutput io.Writer
 }
 
 func (l *ScribeLogger) connect() error {
@@ -34,10 +37,10 @@ func (l *ScribeLogger) connect() error {
 		conn, err = net.Dial("tcp", l.addr)
 		if err != nil {
 			if reconns >= _MAX_RETRIES-1 {
-				log.Printf("ERROR: Could not connect to scribe server: %s\n", err)
+				fmt.Fprintf(os.Stderr, "ERROR: Could not connect to scribe server: %s\n", err)
 				return err
 			}
-			time.Sleep(100 * time.Millisecond) //wait a bit before retrying
+			time.Sleep(1000 * time.Millisecond) //wait a bit before retrying
 		} else {
 			break
 		}
@@ -59,15 +62,16 @@ func (l *ScribeLogger) connect() error {
 // category - the scribe category prefix for all your messages. They wil be formatted as "category.LEVEL"
 //
 // bufferSize is the sending channel's buffer size. 100 is a good estimate. This causes sends to be non blocking
-func NewScribeLogger(addr string, category string, bufferSize int) *ScribeLogger {
+func NewScribeLogger(addr string, category string, bufferSize int, secondaryOutput io.Writer) *ScribeLogger {
 
 	ret := &ScribeLogger{
-		addr:      addr,
-		client:    nil,
-		enabled:   true,
-		category:  category,
-		channel:   make(chan *scribe.LogEntry, bufferSize),
-		formatter: &ScribeFormatter{},
+		addr:            addr,
+		client:          nil,
+		enabled:         true,
+		category:        category,
+		channel:         make(chan *scribe.LogEntry, bufferSize),
+		formatter:       &ScribeFormatter{},
+		secondaryOutput: secondaryOutput,
 	}
 
 	go ret.sendLoop()
@@ -83,7 +87,7 @@ func (l *ScribeLogger) sendLoop() {
 	defer func() {
 		e := recover()
 		if e != nil {
-			log.Printf("Scribe client send loop crashed! restarting...")
+			fmt.Fprintf(os.Stderr, "Scribe client send loop crashed! restarting...")
 			go l.sendLoop()
 		}
 
@@ -98,8 +102,10 @@ func (l *ScribeLogger) sendLoop() {
 				e := l.connect()
 
 				if e != nil {
-					log.Printf("Error connecting to scribe: %s", e)
-					log.Printf(msg.Message)
+					if l.secondaryOutput == nil {
+						fmt.Fprintln(os.Stderr, msg.Message)
+					}
+
 					continue
 				}
 			}
@@ -153,6 +159,10 @@ func (l *ScribeLogger) Emit(ctx *logging.MessageContext, message string, args ..
 		str := l.formatter.Format(ctx, message, args...)
 		category := fmt.Sprintf("%s.%s", l.category, ctx.Level)
 
+		if l.secondaryOutput != nil {
+			fmt.Fprintln(l.secondaryOutput, str)
+		}
+
 		//make sure the channel is not closed
 		if l.channel != nil {
 
@@ -161,6 +171,7 @@ func (l *ScribeLogger) Emit(ctx *logging.MessageContext, message string, args ..
 			case l.channel <- &scribe.LogEntry{category, str}:
 				break
 			default: //could not send
+
 				return fmt.Errorf("Scribe buffer full")
 			}
 		} else {
