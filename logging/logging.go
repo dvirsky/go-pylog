@@ -178,7 +178,7 @@ func Debug(msg string, args ...interface{}) {
 
 //format the message
 func writeMessage(level string, msg string, args ...interface{}) {
-	writeMessageDepth(3, level, msg, args...)
+	writeMessageDepth(4, level, msg, args...)
 }
 
 func writeMessageDepth(depth int, level string, msg string, args ...interface{}) {
